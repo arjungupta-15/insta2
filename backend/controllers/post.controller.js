@@ -8,43 +8,66 @@ import { getReceiverSocketId, io } from "../socket/socket.js";
 export const addNewPost = async (req, res) => {
     try {
         const { caption } = req.body;
-        const image = req.file;
+        const media = req.file; // Can be image or video
         const authorId = req.id;
 
-        if (!image) return res.status(400).json({ message: 'Image required' });
+        if (!media) {
+            return res.status(400).json({ message: "Image or Video is required", success: false });
+        }
 
-        // image upload 
-        const optimizedImageBuffer = await sharp(image.buffer)
-            .resize({ width: 800, height: 800, fit: 'inside' })
-            .toFormat('jpeg', { quality: 80 })
-            .toBuffer();
+        let cloudResponse;
 
-        // buffer to data uri
-        const fileUri = `data:image/jpeg;base64,${optimizedImageBuffer.toString('base64')}`;
-        const cloudResponse = await cloudinary.uploader.upload(fileUri);
+        if (media.mimetype.startsWith("image/")) {
+            // Optimize and upload image
+            const optimizedImageBuffer = await sharp(media.buffer)
+                .resize({ width: 800, height: 800, fit: "inside" })
+                .toFormat("jpeg", { quality: 80 })
+                .toBuffer();
+
+            const fileUri = `data:image/jpeg;base64,${optimizedImageBuffer.toString("base64")}`;
+            cloudResponse = await cloudinary.uploader.upload(fileUri, { resource_type: "image" });
+        } else if (media.mimetype.startsWith("video/")) {
+            // Directly upload video
+            cloudResponse = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    { resource_type: "video" },
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result);
+                    }
+                );
+                media.stream.pipe(uploadStream);
+            });
+        } else {
+            return res.status(400).json({ message: "Unsupported media type", success: false });
+        }
+
+        // Create the post
         const post = await Post.create({
             caption,
-            image: cloudResponse.secure_url,
-            author: authorId
+            image: media.mimetype.startsWith("image/") ? cloudResponse.secure_url : undefined,
+            video: media.mimetype.startsWith("video/") ? cloudResponse.secure_url : undefined,
+            author: authorId,
         });
+
         const user = await User.findById(authorId);
         if (user) {
             user.posts.push(post._id);
             await user.save();
         }
 
-        await post.populate({ path: 'author', select: '-password' });
+        await post.populate({ path: "author", select: "-password" });
 
         return res.status(201).json({
-            message: 'New post added',
+            message: "New post added successfully",
             post,
             success: true,
-        })
-
+        });
     } catch (error) {
         console.log(error);
+        res.status(500).json({ message: "Internal Server Error", success: false });
     }
-}
+};
 export const getAllPost = async (req, res) => {
     try {
         const posts = await Post.find().sort({ createdAt: -1 })
