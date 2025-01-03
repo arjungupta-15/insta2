@@ -1,14 +1,14 @@
-import React, { useRef, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader } from './ui/dialog';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Textarea } from './ui/textarea';
-import { Button } from './ui/button';
-import { readFileAsDataURL } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import axios from 'axios';
-import { useDispatch, useSelector } from 'react-redux';
-import { setPosts } from '@/redux/postSlice';
+import React, { useRef, useState } from "react";
+import { Dialog, DialogContent, DialogHeader } from "./ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Textarea } from "./ui/textarea";
+import { Button } from "./ui/button";
+import { readFileAsDataURL } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import axios from "axios";
+import { useDispatch, useSelector } from "react-redux";
+import { setPosts } from "@/redux/postSlice";
 
 const CreatePost = ({ open, setOpen }) => {
   const fileRef = useRef();
@@ -31,17 +31,17 @@ const CreatePost = ({ open, setOpen }) => {
 
   const createPostHandler = async () => {
     const formData = new FormData();
-    formData.append('caption', caption);
-    if (file) formData.append('media', file); // Backend expects `media` field
+    formData.append("caption", caption);
+    if (file) formData.append("media", file); // Backend expects `media` field
 
     try {
       setLoading(true);
       const res = await axios.post(
-        'https://insta2-sr3z.onrender.com//api/v1/post/addpost',
+        "https://insta2-sr3z.onrender.com/api/v1/post/addpost",
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
           withCredentials: true,
         }
@@ -52,11 +52,11 @@ const CreatePost = ({ open, setOpen }) => {
         toast.success(res.data.message);
         setOpen(false);
         setFile(null);
-        setCaption('');
-        setMediaPreview('');
+        setCaption("");
+        setMediaPreview("");
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create post');
+      toast.error(error.response?.data?.message || "Failed to create post");
     } finally {
       setLoading(false);
     }
@@ -84,26 +84,31 @@ const CreatePost = ({ open, setOpen }) => {
         />
         {mediaPreview && (
           <div className="w-full h-64 flex items-center justify-center">
-            {/* Display video or image based on the file type */}
-            {file?.type.startsWith('image/') ? (
+            {file?.type.startsWith("image/") ? (
               <img src={mediaPreview} alt="preview_img" className="object-cover h-full w-full rounded-md" />
             ) : (
               <video src={mediaPreview} controls className="object-cover h-full w-full rounded-md" />
             )}
           </div>
         )}
-        <input ref={fileRef} type="file" className="hidden" onChange={fileChangeHandler} accept="image/*,video/*" />
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          onChange={fileChangeHandler}
+          accept="image/*,video/*"
+        />
         <Button onClick={() => fileRef.current.click()} className="w-fit mx-auto bg-[#0095F6] hover:bg-[#258bcf]">
           Select from computer
         </Button>
         {mediaPreview && (
           loading ? (
-            <Button>
+            <Button disabled>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Please wait
             </Button>
           ) : (
-            <Button onClick={createPostHandler} type="submit" className="w-full">
+            <Button onClick={createPostHandler} className="w-full">
               Post
             </Button>
           )
