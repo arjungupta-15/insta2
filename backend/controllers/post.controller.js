@@ -25,18 +25,18 @@ export const addNewPost = async (req, res) => {
                 .toBuffer();
 
             const fileUri = `data:image/jpeg;base64,${optimizedImageBuffer.toString("base64")}`;
-            cloudResponse = await cloudinary.uploader.upload(fileUri, { resource_type: "image" });
+            cloudResponse = await cloudinary.v2.uploader.upload(fileUri, { resource_type: "image" });
         } else if (media.mimetype.startsWith("video/")) {
             // Directly upload video
             cloudResponse = await new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
+                const uploadStream = cloudinary.v2.uploader.upload_stream(
                     { resource_type: "video" },
                     (error, result) => {
                         if (error) reject(error);
                         else resolve(result);
                     }
                 );
-                media.stream.pipe(uploadStream);
+                req.file.stream.pipe(uploadStream);
             });
         } else {
             return res.status(400).json({ message: "Unsupported media type", success: false });
@@ -64,7 +64,7 @@ export const addNewPost = async (req, res) => {
             success: true,
         });
     } catch (error) {
-        console.log(error);
+        console.error(error);
         res.status(500).json({ message: "Internal Server Error", success: false });
     }
 };
